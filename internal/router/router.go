@@ -15,19 +15,24 @@ import (
 	"github.com/julienschmidt/httprouter"
 	"github.com/rs/zerolog"
 
+	"codesignal/internal/config"
+	"codesignal/internal/repository"
 	"codesignal/internal/store"
 )
 
 // New instantiates a new http router and
 // configures the endpoints of the service.
-func New(log zerolog.Logger) http.Handler {
+func New(log zerolog.Logger, repo repository.Store, appConfig *config.Config) http.Handler {
 	router := httprouter.New()
 
-	storeService := store.NewService(log)
+	storeService := store.NewService(log, repo, store.Opts{
+		MaxKeyLength: appConfig.GetMaxKeyLength(),
+		MaxValueSize: appConfig.GetMaxValueSize(),
+	})
 
 	router.HandlerFunc(http.MethodPost, "/key", storeService.SetKey)
-	router.HandlerFunc(http.MethodGet, "/key/:id", storeService.GetKey)
-	router.HandlerFunc(http.MethodDelete, "/key/:id", storeService.DeleteKey)
+	router.HandlerFunc(http.MethodGet, "/key/:key", storeService.GetKey)
+	router.HandlerFunc(http.MethodDelete, "/key/:key", storeService.DeleteKey)
 
 	return router
 }

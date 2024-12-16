@@ -4,8 +4,10 @@ import (
 	"os"
 
 	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 
 	"codesignal/internal/config"
+	"codesignal/internal/repository"
 	"codesignal/internal/router"
 	"codesignal/internal/server"
 )
@@ -17,14 +19,22 @@ func main() {
 		Timestamp().
 		Logger()
 
-	configuration, err := config.LoadFromEnv()
+	appConfig, err := config.LoadFromEnv()
 	if err != nil {
 		logger.Fatal().Err(err).Msg("failed to load env vars")
 	}
 
-	httpRouter := router.New(logger)
+	repo, err := repository.NewKeyValueStore(logger, repository.Opts{
+		SyncInterval: appConfig.SyncInterval,
+		DataFile:     appConfig.DataFile,
+	})
+	if err != nil {
+		log.Error().Err(err).Msg("failed to create repository")
+	}
 
-	httpServer := server.New(logger, configuration.Server, httpRouter)
+	httpRouter := router.New(logger, repo, appConfig)
+
+	httpServer := server.New(logger, appConfig.Server, httpRouter)
 
 	if err := httpServer.Run(); err != nil {
 		logger.Fatal().Err(err).Msg("server failure")

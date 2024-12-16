@@ -10,6 +10,8 @@
 package config
 
 import (
+	"time"
+
 	_ "github.com/joho/godotenv/autoload" // Autoload env vars from a .env file.
 	"github.com/kelseyhightower/envconfig"
 
@@ -20,6 +22,30 @@ import (
 // parameters that this service uses.
 type Config struct {
 	Server server.Config `envconfig:"SERVER"`
+	// MaxKeyLength is the maximum length of a key in characters.
+	MaxKeyLength int `envconfig:"MAX_KEY_LENGTH"`
+	// MaxValueSize is the maximum size of a value in bytes.
+	MaxValueSize int `envconfig:"MAX_VALUE_SIZE"`
+	// SyncInterval is the interval to sync data to disk.
+	SyncInterval time.Duration `envconfig:"SYNC_INTERVAL" default:"1m"`
+	// DataFile is the path to the data file.
+	DataFile string `envconfig:"DATA_FILE"`
+}
+
+func (c *Config) GetMaxKeyLength() int {
+	if c == nil {
+		return 0
+	}
+
+	return c.MaxKeyLength
+}
+
+func (c *Config) GetMaxValueSize() int {
+	if c == nil {
+		return 0
+	}
+
+	return c.MaxValueSize
 }
 
 // LoadFromEnv will load the env vars from the OS.

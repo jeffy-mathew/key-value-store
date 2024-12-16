@@ -51,6 +51,7 @@ func New(log zerolog.Logger, config Config, handler http.Handler) *Server {
 }
 
 // Run will start the HTTP Server and will handle shutdowns gracefully.
+// TODO: Add shutdown hook for repository store Close().
 func (s *Server) Run() error {
 	shutdown := make(chan os.Signal, 1)
 	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)

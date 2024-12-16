@@ -20,15 +20,15 @@ import (
 )
 
 const (
-	testKey = "test-key"
+	testKey   = "test-key"
 	testValue = "test-value"
 )
 
-func setupTest(t *testing.T) (*store.Service, *repomock.MockStore) {
+func setupTest(t *testing.T, opts store.Opts) (*store.Service, *repomock.MockStore) {
 	ctrl := gomock.NewController(t)
 	mockStore := repomock.NewMockStore(ctrl)
 	logger := zerolog.New(nil)
-	service := store.NewService(logger, mockStore)
+	service := store.NewService(logger, mockStore, opts)
 	return service, mockStore
 }
 
@@ -39,6 +39,7 @@ func TestServiceSet(t *testing.T) {
 		setupMock      func(*repomock.MockStore)
 		expectedStatus int
 		expectedBody   store.Response
+		opts           store.Opts
 	}{
 		{
 			name: "key fetch failed due to storage error",
@@ -114,11 +115,69 @@ func TestServiceSet(t *testing.T) {
 				StatusCode: store.StatusSuccess,
 			},
 		},
+		{
+			name: "key too long (default max key length)",
+			input: store.KeyValue{
+				Key:   string(make([]byte, store.DefaultMaxKeyLength+1)),
+				Value: testValue,
+			},
+			setupMock:      func(m *repomock.MockStore) {},
+			expectedStatus: http.StatusBadRequest,
+			expectedBody: store.Response{
+				Message:    fmt.Sprintf("err: key length exceeds maximum allowed length, max key length: %d", store.DefaultMaxKeyLength),
+				StatusCode: store.StatusKeyTooLong,
+			},
+		},
+		{
+			name: "value too large (default max value size)",
+			input: store.KeyValue{
+				Key:   testKey,
+				Value: string(make([]byte, store.DefaultMaxValueSize+1)),
+			},
+			setupMock:      func(m *repomock.MockStore) {},
+			expectedStatus: http.StatusBadRequest,
+			expectedBody: store.Response{
+				Message:    fmt.Sprintf("err: value size exceeds maximum allowed size, max value size: %d", store.DefaultMaxValueSize),
+				StatusCode: store.StatusValueTooLarge,
+			},
+		},
+		{
+			name: "key too long (overriden max key length)",
+			input: store.KeyValue{
+				Key:   string(make([]byte, 11)),
+				Value: testValue,
+			},
+			setupMock:      func(m *repomock.MockStore) {},
+			expectedStatus: http.StatusBadRequest,
+			expectedBody: store.Response{
+				Message:    fmt.Sprintf("err: key length exceeds maximum allowed length, max key length: %d", 10),
+				StatusCode: store.StatusKeyTooLong,
+			},
+			opts: store.Opts{
+				MaxKeyLength: 10,
+			},
+		},
+		{
+			name: "value too large (overriden max value size)",
+			input: store.KeyValue{
+				Key:   testKey,
+				Value: string(make([]byte, 21)),
+			},
+			setupMock:      func(m *repomock.MockStore) {},
+			expectedStatus: http.StatusBadRequest,
+			expectedBody: store.Response{
+				Message:    fmt.Sprintf("err: value size exceeds maximum allowed size, max value size: %d", 20),
+				StatusCode: store.StatusValueTooLarge,
+			},
+			opts: store.Opts{
+				MaxValueSize: 20,
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			service, mockStore := setupTest(t)
+			service, mockStore := setupTest(t, tt.opts)
 			tt.setupMock(mockStore)
 
 			body, err := json.Marshal(tt.input)
@@ -207,7 +266,7 @@ func TestServiceGet(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			service, mockStore := setupTest(t)
+			service, mockStore := setupTest(t, store.Opts{})
 			tt.setupMock(mockStore)
 
 			req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/key/%s", tt.key), nil)
@@ -284,7 +343,7 @@ func TestServiceDelete(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			service, mockStore := setupTest(t)
+			service, mockStore := setupTest(t, store.Opts{})
 			tt.setupMock(mockStore)
 
 			req := httptest.NewRequest(http.MethodDelete, "/v1/store/"+tt.key, nil)

@@ -7,12 +7,25 @@ package store
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/rs/zerolog"
 
 	"codesignal/internal/repository"
+)
+
+var (
+	ErrKeyTooLong    = errors.New("key length exceeds maximum allowed length")
+	ErrValueTooLarge = errors.New("value size exceeds maximum allowed size")
+)
+
+// Validation constants
+const (
+	DefaultMaxKeyLength = 256     // Maximum length for keys in characters
+	DefaultMaxValueSize = 1 << 20 // Maximum size for values (1MB)
 )
 
 // KeyValue represents a key-value pair.
@@ -26,13 +39,15 @@ type StatusCode int
 
 // Status codes for the key-value store operations
 const (
-	StatusSuccess      StatusCode = 1000
-	StatusKeyNotFound  StatusCode = 1001
-	StatusKeyExists    StatusCode = 1002
-	StatusInvalidKey   StatusCode = 1003
-	StatusInvalidValue StatusCode = 1004
-	StatusStorageError StatusCode = 1005
-	StatusInvalidJSON  StatusCode = 1006
+	StatusSuccess       StatusCode = 1000
+	StatusKeyNotFound   StatusCode = 1001
+	StatusKeyExists     StatusCode = 1002
+	StatusInvalidKey    StatusCode = 1003
+	StatusInvalidValue  StatusCode = 1004
+	StatusStorageError  StatusCode = 1005
+	StatusInvalidJSON   StatusCode = 1006
+	StatusKeyTooLong    StatusCode = 1007
+	StatusValueTooLarge StatusCode = 1008
 )
 
 // Response represents the API response
@@ -44,16 +59,52 @@ type Response struct {
 
 // Service for managing a key value store.
 type Service struct {
-	log   zerolog.Logger
-	store repository.Store
+	maxKeyLength int
+	MaxValueSize int
+	log          zerolog.Logger
+	store        repository.Store
+}
+
+type Opts struct {
+	MaxKeyLength int
+	MaxValueSize int
 }
 
 // NewService returns a new instance of Service.
-func NewService(log zerolog.Logger, store repository.Store) *Service {
+func NewService(log zerolog.Logger, store repository.Store, opts Opts) *Service {
 	return &Service{
-		log:   log,
-		store: store,
+		maxKeyLength: opts.MaxKeyLength,
+		MaxValueSize: opts.MaxValueSize,
+		log:          log,
+		store:        store,
 	}
+}
+
+func (s *Service) getMaxKeyLength() int {
+	if s.maxKeyLength <= 0 {
+		return DefaultMaxKeyLength
+	}
+
+	return s.maxKeyLength
+}
+
+func (s *Service) getMaxValueSize() int {
+	if s.MaxValueSize <= 0 {
+		return DefaultMaxValueSize
+	}
+
+	return s.MaxValueSize
+}
+
+// validateKeyValue checks if the key-value pair meets the size requirements
+func (s *Service) validateKeyValue(kv KeyValue) error {
+	if len(kv.Key) > s.getMaxKeyLength() {
+		return fmt.Errorf("err: %w, max key length: %d", ErrKeyTooLong, s.getMaxKeyLength())
+	}
+	if len(kv.Value) > s.getMaxValueSize() {
+		return fmt.Errorf("err: %w, max value size: %d", ErrValueTooLarge, s.getMaxValueSize())
+	}
+	return nil
 }
 
 func (s *Service) SetKey(w http.ResponseWriter, r *http.Request) {
@@ -62,6 +113,20 @@ func (s *Service) SetKey(w http.ResponseWriter, r *http.Request) {
 		s.log.Error().Err(err).Msg("failed to decode request body")
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(Response{Message: "invalid request body", StatusCode: StatusInvalidJSON})
+		return
+	}
+
+	if err := s.validateKeyValue(kv); err != nil {
+		s.log.Error().Err(err).Msg("invalid key-value pair")
+		w.WriteHeader(http.StatusBadRequest)
+		var statusCode StatusCode
+		if errors.Is(err, ErrKeyTooLong) {
+			statusCode = StatusKeyTooLong
+		} else {
+			statusCode = StatusValueTooLarge
+		}
+
+		json.NewEncoder(w).Encode(Response{Message: err.Error(), StatusCode: statusCode})
 		return
 	}
 

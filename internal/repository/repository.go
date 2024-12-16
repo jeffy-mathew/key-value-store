@@ -21,7 +21,7 @@ type Store interface {
 }
 
 // Config holds the configuration for the store
-type Config struct {
+type Opts struct {
 	SyncInterval time.Duration
 	DataFile     string
 }
@@ -31,7 +31,7 @@ type KeyValueStore struct {
 	data   map[string][]byte
 	mu     sync.RWMutex
 	log    zerolog.Logger
-	config Config
+	config Opts
 	done   chan struct{}
 }
 
@@ -41,7 +41,7 @@ type Data struct {
 }
 
 // NewKeyValueStore creates a new instance of KeyValueStore
-func NewKeyValueStore(log zerolog.Logger, config Config) (*KeyValueStore, error) {
+func NewKeyValueStore(log zerolog.Logger, config Opts) (*KeyValueStore, error) {
 	kvs := &KeyValueStore{
 		data:   make(map[string][]byte),
 		log:    log,

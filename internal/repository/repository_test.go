@@ -22,14 +22,14 @@ func TestKeyValueStore(t *testing.T) {
 		os.Remove(tmpFile)
 	})
 
-	config := Config{
+	Opts := Opts{
 		SyncInterval: 100 * time.Millisecond,
 		DataFile:     tmpFile,
 	}
 	logger := zerolog.New(os.Stdout)
 
 	t.Run("NewKeyValueStore", func(t *testing.T) {
-		store, err := NewKeyValueStore(logger, config)
+		store, err := NewKeyValueStore(logger, Opts)
 		if err != nil {
 			t.Fatalf("Failed to create new store: %v", err)
 		}
@@ -41,7 +41,7 @@ func TestKeyValueStore(t *testing.T) {
 	})
 
 	t.Run("Set", func(t *testing.T) {
-		store, _ := NewKeyValueStore(logger, config)
+		store, _ := NewKeyValueStore(logger, Opts)
 		t.Cleanup(func() {
 			_ = store.Close()
 		})
@@ -56,7 +56,7 @@ func TestKeyValueStore(t *testing.T) {
 	})
 
 	t.Run("Get", func(t *testing.T) {
-		store, _ := NewKeyValueStore(logger, config)
+		store, _ := NewKeyValueStore(logger, Opts)
 		t.Cleanup(func() {
 			_ = store.Close()
 		})
@@ -70,7 +70,7 @@ func TestKeyValueStore(t *testing.T) {
 	})
 
 	t.Run("Set and Get", func(t *testing.T) {
-		store, _ := NewKeyValueStore(logger, config)
+		store, _ := NewKeyValueStore(logger, Opts)
 		defer store.Close()
 
 		ctx := context.Background()
@@ -89,7 +89,7 @@ func TestKeyValueStore(t *testing.T) {
 	})
 
 	t.Run("Delete", func(t *testing.T) {
-		store, _ := NewKeyValueStore(logger, config)
+		store, _ := NewKeyValueStore(logger, Opts)
 		defer store.Close()
 
 		ctx := context.Background()
@@ -104,13 +104,13 @@ func TestKeyValueStore(t *testing.T) {
 	})
 
 	t.Run("Persistence", func(t *testing.T) {
-		store1, _ := NewKeyValueStore(logger, config)
+		store1, _ := NewKeyValueStore(logger, Opts)
 		ctx := context.Background()
 
 		store1.Set(ctx, key, value)
 		require.NoError(t, store1.Close())
 
-		store2, _ := NewKeyValueStore(logger, config)
+		store2, _ := NewKeyValueStore(logger, Opts)
 		t.Cleanup(func() {
 			store2.Close()
 		})

@@ -57,6 +57,7 @@ func NewKeyValueStore(log zerolog.Logger, config Config) (*KeyValueStore, error)
 	return kvs, nil
 }
 
+// Set sets a key-value pair in the store.
 func (k *KeyValueStore) Set(ctx context.Context, key string, value []byte) error {
 	k.mu.Lock()
 	defer k.mu.Unlock()
@@ -64,6 +65,7 @@ func (k *KeyValueStore) Set(ctx context.Context, key string, value []byte) error
 	return nil
 }
 
+// Get retrieves a value from the store by key.
 func (k *KeyValueStore) Get(ctx context.Context, key string) ([]byte, bool, error) {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
@@ -71,6 +73,7 @@ func (k *KeyValueStore) Get(ctx context.Context, key string) ([]byte, bool, erro
 	return value, exists, nil
 }
 
+// Delete deletes a key from the store.
 func (k *KeyValueStore) Delete(ctx context.Context, key string) error {
 	k.mu.Lock()
 	defer k.mu.Unlock()
@@ -78,12 +81,14 @@ func (k *KeyValueStore) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
+// Close closes the store and persists the data to disk.
+// TODO: extend close such that it can flush data to any underlying storage provided as an interface.
 func (k *KeyValueStore) Close() error {
 	close(k.done)
 	return k.syncToDisk()
 }
 
-// startSync starts a goroutine to sync data to dis at SyncInterval.
+// startSync starts a goroutine to sync data to disk at SyncInterval.
 func (k *KeyValueStore) startSync() {
 	ticker := time.NewTicker(k.config.SyncInterval)
 	defer ticker.Stop()

@@ -30,10 +30,10 @@ func TestKeyValueStore(t *testing.T) {
 
 	t.Run("NewKeyValueStore", func(t *testing.T) {
 		store, err := NewKeyValueStore(logger, Opts)
-		if err != nil {
-			t.Fatalf("Failed to create new store: %v", err)
-		}
-		defer store.Close()
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			_ = store.Close()
+		})
 
 		if store.data == nil {
 			t.Error("Store data map not initialized")

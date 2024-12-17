@@ -254,9 +254,9 @@ func TestServiceGet(t *testing.T) {
 			},
 			expectedStatus: http.StatusOK,
 			expectedBody: store.Response{
-				Message:    "key found successfully",
+				Message:    "key found",
 				StatusCode: store.StatusSuccess,
-				Data: store.KeyValue{
+				Data: &store.KeyValue{
 					Key:   testKey,
 					Value: testValue,
 				},

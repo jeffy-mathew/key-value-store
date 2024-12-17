@@ -54,7 +54,7 @@ const (
 type Response struct {
 	Message    string     `json:"message"`
 	StatusCode StatusCode `json:"status_code"`
-	Data       KeyValue   `json:"data,omitempty"`
+	Data       *KeyValue  `json:"data,omitempty"`
 }
 
 // Service for managing a key value store.
@@ -169,12 +169,14 @@ func (s *Service) GetKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(Response{Message: "key found successfully", StatusCode: StatusSuccess,
-		Data: KeyValue{
+	s.doJSONWrite(w, http.StatusOK, Response{
+		Message:    "key found",
+		StatusCode: StatusSuccess,
+		Data: &KeyValue{
 			Key:   key,
 			Value: string(kv),
-		}})
+		},
+	})
 }
 
 func (s *Service) DeleteKey(w http.ResponseWriter, req *http.Request) {

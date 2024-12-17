@@ -1,0 +1,223 @@
+openapi: 3.0.0
+info:
+  title: Key-Value Store API
+  description: |
+    A simple in-memory key-value store service that provides basic operations like Get, Set, and Delete.
+    The service includes validation for key length and value size to ensure optimal performance.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8081
+    description: |
+      Local development server, listen port defaults to 8081
+      Use environment variables to configure server address
+
+paths:
+  /key/{key}:
+    get:
+      summary: Get a value by key
+      description: Retrieves the value associated with the specified key
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The key to retrieve
+      responses:
+        '200':
+          description: Key found successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                message: "key found"
+                statusCode: 1000
+                data:
+                  key: "example-key"
+                  value: "example-value"
+        '404':
+          description: Key not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                message: "key not found"
+                statusCode: 1001
+        '400':
+          description: Bad Request - Invalid key or value provided
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidKey:
+                  value:
+                    message: "invalid key"
+                    statusCode: 1003
+                invalidValue:
+                  value:
+                    message: "invalid value: exceeds maximum size limit"
+                    statusCode: 1004
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                message: "failed to get key"
+                statusCode: 1005
+    delete:
+      summary: Delete a key-value pair
+      description: Deletes the key-value pair associated with the specified key
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The key to delete
+      responses:
+        '200':
+          description: Key deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                message: "key deleted successfully"
+                statusCode: 1000
+        '404':
+          description: Key not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                message: "key not found"
+                statusCode: 1001
+        '400':
+          description: Bad Request - Invalid key or value provided
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                message: "failed to delete key"
+                statusCode: 1005
+
+  /key:
+    post:
+      summary: Create a new key-value pair
+      description: Creates a new key-value pair in the store
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KeyValue'
+            example:
+              key: "example-key"
+              value: "example-value"
+      responses:
+        '201':
+          description: Key created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                message: "key created successfully"
+                statusCode: 1000
+        '400':
+          description: Bad Request - Invalid key or value provided
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidKey:
+                  value:
+                    message: "err: key length exceeds maximum allowed length, max key length: 256"
+                    statusCode: 1003
+                invalidValue:
+                  value:
+                    message: "err: value size exceeds maximum allowed size, max value size: 1024"
+                    statusCode: 1004
+        '409':
+          description: Key already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                message: "key already exists"
+                statusCode: 1002
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                message: "failed to set key"
+                statusCode: 1005
+
+components:
+  schemas:
+    KeyValue:
+      type: object
+      required:
+        - key
+        - value
+      properties:
+        key:
+          type: string
+          description:
+            The key (default maximum length 256 characters), can be configured in the environment variable MAX_KEY_LENGTH
+        value:
+          type: string
+          description: The value (default maximum size 1MB), can be configured in the environment variable MAX_VALUE_SIZE
+
+    Response:
+      type: object
+      required:
+        - message
+        - statusCode
+      properties:
+        message:
+          type: string
+          description: A human-readable message describing the result of the operation
+        statusCode:
+          type: integer
+          description: A custom status code for the operation
+          enum:
+            - 1000  # Success
+            - 1001  # Key not found
+            - 1002  # Key exists
+            - 1003  # Invalid key
+            - 1004  # Invalid value
+            - 1005  # Storage error
+            - 1006  # Invalid JSON
+            - 1007  # Key too long
+            - 1008  # Value too large
+
+    SuccessResponse:
+      allOf:
+        - $ref: '#/components/schemas/Response'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/KeyValue'
+
+    ErrorResponse:
+      allOf:
+        - $ref: '#/components/schemas/Response'

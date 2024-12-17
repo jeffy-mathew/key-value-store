@@ -1,0 +1,16 @@
+services:
+  key-value-store:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: key-value-store
+    ports:
+      - "${PORT:-8081}:8081"
+    environment:
+      - SERVER_ADDRESS=0.0.0.0:8081
+      - READ_TIMEOUT=${READ_TIMEOUT:-5s}
+      - WRITE_TIMEOUT=${WRITE_TIMEOUT:-5s}
+      - SHUTDOWN_TIMEOUT=${SHUTDOWN_TIMEOUT:-5s}
+      - MAX_KEY_LENGTH=${MAX_KEY_LENGTH:-256}
+      - MAX_VALUE_SIZE=${MAX_VALUE_SIZE:-1048576}
+    restart: unless-stopped

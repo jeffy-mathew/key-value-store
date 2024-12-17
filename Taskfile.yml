@@ -1,0 +1,55 @@
+version: '3'
+
+dotenv: ['.env']
+
+tasks:
+  build:
+    desc: Build the key-value store binary
+    cmds:
+      - go build -o store ./cmd/store
+
+  test:
+    desc: Run all tests
+    cmds:
+      - go test -v ./...
+
+  test:integration:
+    desc: Run integration tests
+    cmds:
+      - go test -v ./tests -tags=integration
+
+  test:benchmark:
+    desc: Run benchmark tests
+    cmds:
+      - go test -v ./tests -bench=. -benchmem
+
+  run:
+    desc: Run the key-value store service
+    cmds:
+      - go run ./cmd/store
+
+  docker:build:
+    desc: Build Docker image
+    cmds:
+      - docker build -t key-value-store .
+
+  docker:run:
+    desc: Run Docker container
+    cmds:
+      - docker-compose up
+
+  docker:stop:
+    desc: Stop Docker container
+    cmds:
+      - docker-compose down
+
+  lint:
+    desc: Run linters
+    cmds:
+      - golangci-lint run
+
+  clean:
+    desc: Clean build artifacts
+    cmds:
+      - rm -f store
+      - go clean -testcache

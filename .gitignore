@@ -1,1 +1,14 @@
-store
+./store
+# Binary
+/store
+cmd/store/store
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# Test coverage
+coverage.out

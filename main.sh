@@ -12,3 +12,7 @@
 echo "==> Running the tests..."
 go mod download 
 go test ./...
+
+
+echo "==> Running the server..."
+go run cmd/store/main.go

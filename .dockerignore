@@ -1,0 +1,30 @@
+# Git
+.git
+.gitignore
+
+# Docker
+Dockerfile
+.dockerignore
+
+# IDE directories
+.idea
+.vscode
+
+# Test files
+*_test.go
+tests/
+testdata/
+
+# Build artifacts
+bin/
+*.exe
+*.test
+*.out
+
+# Documentation
+*.md
+docs/
+
+# Misc
+.env
+*.log

@@ -142,7 +142,7 @@ func TestServiceSet(t *testing.T) {
 			},
 		},
 		{
-			name: "key too long (overriden max key length)",
+			name: "key too long (overridden max key length)",
 			input: store.KeyValue{
 				Key:   string(make([]byte, 11)),
 				Value: testValue,
@@ -158,7 +158,7 @@ func TestServiceSet(t *testing.T) {
 			},
 		},
 		{
-			name: "value too large (overriden max value size)",
+			name: "value too large (overridden max value size)",
 			input: store.KeyValue{
 				Key:   testKey,
 				Value: string(make([]byte, 21)),

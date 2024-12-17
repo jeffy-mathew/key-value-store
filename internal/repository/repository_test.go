@@ -52,8 +52,6 @@ func TestKeyValueStore(t *testing.T) {
 		store, _ := NewKeyValueStore(logger)
 
 		ctx := context.Background()
-		key := "test-key"
-		value := []byte("test-value")
 
 		err := store.Set(ctx, key, value)
 		if err != nil {

@@ -2,6 +2,8 @@
 
 An in-memory key-value store service built with Go, featuring a RESTful API interface and Docker support.
 
+NOTE: git files got corrupted after initial commit, so I couldn't pull the latest changes. Hence, I've pushed the code to https://github.com/jeffy-mathew/key-value-store. Please refer it for code history.
+
 ## Features
 
 - In-memory key-value storage
@@ -63,6 +65,11 @@ task run
 task test:all               # Run all tests and benchmarks
 task test:unit               # Run unit tests
 task test:integration        # Run integration tests
+
+# Generate seed data for benchmarks
+task generate:seed           # Generate seed data
+
+# Run benchmarks 
 task test:benchmark:integration      # Run HTTP benchmark tests
 task test:benchmark:repository # Run store/repository benchmark tests
 
@@ -73,7 +80,7 @@ task docker:stop        # Stop Docker containers
 
 # Development tools
 task lint              # Run linters
-task clean             # Clean build artifacts
+task clean             # Clean build artifacts, generated data, etc.
 ```
 
 ### Manual Usage

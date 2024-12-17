@@ -64,3 +64,16 @@ tasks:
     cmds:
       - rm -f store
       - go clean -testcache
+      - task clear:seed
+  
+  generate:seed:
+    desc: generate benchmark seed data
+    cmds:
+      - go run tools/generate_test_data.go
+      - cp .assets/benchmark_data.gob tests/testdata
+      - cp .assets/benchmark_data.gob internal/repository/testdata
+  
+  clear:seed:
+    desc: clear benchmark seed data
+    cmds:
+      - rm .assets/benchmark_data.gob

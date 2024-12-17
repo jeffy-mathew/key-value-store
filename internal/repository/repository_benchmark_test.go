@@ -7,7 +7,6 @@ import (
 	"encoding/gob"
 	"fmt"
 	"math/rand"
-	"net/http"
 	"strings"
 	"testing"
 	"time"
@@ -19,7 +18,6 @@ import (
 var BenchmarkData []byte
 
 type BenchmarkSuite struct {
-	client   *http.Client
 	store    Store
 	testKeys []string
 }
@@ -69,7 +67,6 @@ func setupBenchmark(b *testing.B) *BenchmarkSuite {
 	}
 
 	return &BenchmarkSuite{
-		client:   &http.Client{},
 		store:    store,
 		testKeys: keys,
 	}
@@ -101,6 +98,7 @@ func BenchmarkDirectReads(b *testing.B) {
 	}
 
 	b.ResetTimer()
+	b.ReportAllocs()
 	b.RunParallel(func(pb *testing.PB) {
 		// each goroutine should maintain its own counter for key rotation
 		keyIndex := 0

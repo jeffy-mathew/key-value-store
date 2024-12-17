@@ -8,7 +8,13 @@ tasks:
     cmds:
       - go build -o store ./cmd/store
 
-  test:
+  test:all:
+    - task test:unit
+    - task test:integration
+    - task test:benchmark:integration
+    - task test:benchmark:repository
+    
+  test:unit:
     desc: Run all tests
     cmds:
       - go test -v ./...
@@ -18,10 +24,15 @@ tasks:
     cmds:
       - go test -v ./tests -tags=integration
 
-  test:benchmark:
-    desc: Run benchmark tests
+  test:benchmark:integration:
+    desc: Run HTTP benchmark tests
     cmds:
-      - go test -v ./tests -bench=. -benchmem
+      - go test -v ./tests -tags=integration -bench=. -benchmem
+
+  test:benchmark:repository:
+    desc: Run store/repository benchmark tests
+    cmds:
+      - go test -v ./internal/repository -bench=. -benchmem
 
   run:
     desc: Run the key-value store service

@@ -60,9 +60,11 @@ task build
 task run
 
 # Run tests
-task test                # Run all tests
-task test:integration    # Run integration tests
-task test:benchmark      # Run benchmark tests
+task test:all               # Run all tests and benchmarks
+task test:unit               # Run unit tests
+task test:integration        # Run integration tests
+task test:benchmark:integration      # Run HTTP benchmark tests
+task test:benchmark:repository # Run store/repository benchmark tests
 
 # Docker operations
 task docker:build        # Build Docker image

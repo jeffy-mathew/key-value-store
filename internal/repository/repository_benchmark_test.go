@@ -1,4 +1,4 @@
-package tests
+package repository
 
 import (
 	"bytes"
@@ -12,8 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"codesignal/internal/repository"
-
 	"github.com/rs/zerolog"
 )
 
@@ -22,7 +20,7 @@ var BenchmarkData []byte
 
 type BenchmarkSuite struct {
 	client   *http.Client
-	store    repository.Store
+	store    Store
 	testKeys []string
 }
 
@@ -55,7 +53,7 @@ func setupBenchmark(b *testing.B) *BenchmarkSuite {
 
 	logger := zerolog.New(zerolog.NewConsoleWriter())
 
-	store, err := repository.NewKeyValueStore(logger)
+	store, err := NewKeyValueStore(logger)
 	if err != nil {
 		b.Fatalf("Failed to create store: %v", err)
 	}

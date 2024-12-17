@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
@@ -16,24 +15,11 @@ func TestKeyValueStore(t *testing.T) {
 		key   = "key"
 		value = []byte("value")
 	)
-
-	tmpFile := "/var/tmp/test_store.json"
-	t.Cleanup(func() {
-		os.Remove(tmpFile)
-	})
-
-	Opts := Opts{
-		SyncInterval: 100 * time.Millisecond,
-		DataFile:     tmpFile,
-	}
 	logger := zerolog.New(os.Stdout)
 
 	t.Run("NewKeyValueStore", func(t *testing.T) {
-		store, err := NewKeyValueStore(logger, Opts)
+		store, err := NewKeyValueStore(logger)
 		require.NoError(t, err)
-		t.Cleanup(func() {
-			_ = store.Close()
-		})
 
 		if store.data == nil {
 			t.Error("Store data map not initialized")
@@ -41,10 +27,7 @@ func TestKeyValueStore(t *testing.T) {
 	})
 
 	t.Run("Set", func(t *testing.T) {
-		store, _ := NewKeyValueStore(logger, Opts)
-		t.Cleanup(func() {
-			_ = store.Close()
-		})
+		store, _ := NewKeyValueStore(logger)
 
 		err := store.Set(context.Background(), key, value)
 		require.NoError(t, err)
@@ -56,11 +39,7 @@ func TestKeyValueStore(t *testing.T) {
 	})
 
 	t.Run("Get", func(t *testing.T) {
-		store, _ := NewKeyValueStore(logger, Opts)
-		t.Cleanup(func() {
-			_ = store.Close()
-		})
-
+		store, _ := NewKeyValueStore(logger)
 		store.data = map[string][]byte{
 			key: value,
 		}
@@ -70,8 +49,7 @@ func TestKeyValueStore(t *testing.T) {
 	})
 
 	t.Run("Set and Get", func(t *testing.T) {
-		store, _ := NewKeyValueStore(logger, Opts)
-		defer store.Close()
+		store, _ := NewKeyValueStore(logger)
 
 		ctx := context.Background()
 		key := "test-key"
@@ -89,8 +67,7 @@ func TestKeyValueStore(t *testing.T) {
 	})
 
 	t.Run("Delete", func(t *testing.T) {
-		store, _ := NewKeyValueStore(logger, Opts)
-		defer store.Close()
+		store, _ := NewKeyValueStore(logger)
 
 		ctx := context.Background()
 
@@ -101,23 +78,5 @@ func TestKeyValueStore(t *testing.T) {
 		_, exists, err := store.Get(ctx, key)
 		assert.NoError(t, err)
 		assert.False(t, exists)
-	})
-
-	t.Run("Persistence", func(t *testing.T) {
-		store1, _ := NewKeyValueStore(logger, Opts)
-		ctx := context.Background()
-
-		store1.Set(ctx, key, value)
-		require.NoError(t, store1.Close())
-
-		store2, _ := NewKeyValueStore(logger, Opts)
-		t.Cleanup(func() {
-			store2.Close()
-		})
-
-		retrieved, exists, err := store2.Get(ctx, key)
-		assert.NoError(t, err)
-		assert.True(t, exists)
-		assert.Equal(t, value, retrieved)
 	})
 }

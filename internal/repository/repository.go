@@ -2,12 +2,8 @@
 package repository
 
 import (
-	"bytes"
 	"context"
-	"encoding/gob"
-	"os"
 	"sync"
-	"time"
 
 	"github.com/rs/zerolog"
 )
@@ -17,22 +13,13 @@ type Store interface {
 	Set(ctx context.Context, key string, value []byte) error
 	Get(ctx context.Context, key string) ([]byte, bool, error)
 	Delete(ctx context.Context, key string) error
-	Close() error
-}
-
-// Config holds the configuration for the store
-type Opts struct {
-	SyncInterval time.Duration
-	DataFile     string
 }
 
 // KeyValueStore implements the Store interface with persistence.
 type KeyValueStore struct {
-	data   map[string][]byte
-	mu     sync.RWMutex
-	log    zerolog.Logger
-	config Opts
-	done   chan struct{}
+	data map[string][]byte
+	mu   *sync.RWMutex
+	log  zerolog.Logger
 }
 
 // Data represents the structure for persistence.
@@ -41,20 +28,12 @@ type Data struct {
 }
 
 // NewKeyValueStore creates a new instance of KeyValueStore
-func NewKeyValueStore(log zerolog.Logger, config Opts) (*KeyValueStore, error) {
+func NewKeyValueStore(log zerolog.Logger) (*KeyValueStore, error) {
 	kvs := &KeyValueStore{
-		data:   make(map[string][]byte),
-		log:    log,
-		config: config,
-		done:   make(chan struct{}),
+		mu:   &sync.RWMutex{},
+		data: make(map[string][]byte),
+		log:  log,
 	}
-
-	if err := kvs.loadFromDisk(); err != nil {
-		return nil, err
-	}
-
-	go kvs.startSync()
-
 	return kvs, nil
 }
 
@@ -79,67 +58,5 @@ func (k *KeyValueStore) Delete(ctx context.Context, key string) error {
 	k.mu.Lock()
 	defer k.mu.Unlock()
 	delete(k.data, key)
-	return nil
-}
-
-// Close closes the store and persists the data to disk.
-// TODO: extend close such that it can flush data to any underlying storage provided as an interface.
-func (k *KeyValueStore) Close() error {
-	close(k.done)
-	return k.syncToDisk()
-}
-
-// startSync starts a goroutine to sync data to disk at SyncInterval.
-func (k *KeyValueStore) startSync() {
-	ticker := time.NewTicker(k.config.SyncInterval)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ticker.C:
-			if err := k.syncToDisk(); err != nil {
-				k.log.Error().Err(err).Msg("failed to sync data to disk")
-			}
-		case <-k.done:
-			return
-		}
-	}
-}
-
-func (k *KeyValueStore) syncToDisk() error {
-	k.mu.RLock()
-	defer k.mu.RUnlock()
-
-	file, err := os.Create(k.config.DataFile)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	data := Data{
-		Store: k.data,
-	}
-
-	return gob.NewEncoder(file).Encode(data)
-}
-
-func (k *KeyValueStore) loadFromDisk() error {
-	data, err := os.ReadFile(k.config.DataFile)
-	if os.IsNotExist(err) {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-
-	var stored Data
-	decoder := gob.NewDecoder(bytes.NewReader(data))
-	if err := decoder.Decode(&stored); err != nil {
-		return err
-	}
-
-	k.mu.Lock()
-	defer k.mu.Unlock()
-	k.data = stored.Store
 	return nil
 }

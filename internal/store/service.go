@@ -151,6 +151,7 @@ func (s *Service) SetKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(Response{Message: "key created successfully", StatusCode: StatusSuccess})
 }
@@ -179,6 +180,7 @@ func (s *Service) GetKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(Response{Message: "key found successfully", StatusCode: StatusSuccess,
 		Data: KeyValue{
@@ -218,6 +220,7 @@ func (s *Service) DeleteKey(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(Response{Message: "key deleted successfully", StatusCode: StatusSuccess})
 }

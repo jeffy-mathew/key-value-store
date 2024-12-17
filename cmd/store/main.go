@@ -24,10 +24,7 @@ func main() {
 		logger.Fatal().Err(err).Msg("failed to load env vars")
 	}
 
-	repo, err := repository.NewKeyValueStore(logger, repository.Opts{
-		SyncInterval: appConfig.SyncInterval,
-		DataFile:     appConfig.DataFile,
-	})
+	repo, err := repository.NewKeyValueStore(logger)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to create repository")
 	}

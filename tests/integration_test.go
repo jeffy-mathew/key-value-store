@@ -48,10 +48,7 @@ func (s *IntegrationTestSuite) SetupSuite() {
 	}
 
 	// Initialize a test store
-	store, err := repository.NewKeyValueStore(logger, repository.Opts{
-		SyncInterval: time.Second,
-		DataFile:     s.dataFile,
-	})
+	store, err := repository.NewKeyValueStore(logger)
 	s.NoError(err)
 	s.store = store
 
@@ -64,9 +61,6 @@ func (s *IntegrationTestSuite) SetupSuite() {
 }
 
 func (s *IntegrationTestSuite) TearDownSuite() {
-	if err := s.store.Close(); err != nil {
-		s.T().Logf("Failed to close store: %v", err)
-	}
 	s.srv.Close()
 
 	// Clean up test data file
@@ -74,18 +68,8 @@ func (s *IntegrationTestSuite) TearDownSuite() {
 }
 
 func (s *IntegrationTestSuite) SetupTest() {
-	// Clean up before each test
-	if err := s.store.Close(); err != nil {
-		s.T().Logf("Failed to close store: %v", err)
-	}
-	os.Remove(s.dataFile)
-
-	// Reinitialize store
 	logger := zerolog.New(zerolog.NewConsoleWriter())
-	store, err := repository.NewKeyValueStore(logger, repository.Opts{
-		SyncInterval: time.Second,
-		DataFile:     s.dataFile,
-	})
+	store, err := repository.NewKeyValueStore(logger)
 	s.NoError(err)
 	s.store = store
 

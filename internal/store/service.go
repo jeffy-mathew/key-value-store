@@ -111,49 +111,41 @@ func (s *Service) SetKey(w http.ResponseWriter, r *http.Request) {
 	var kv KeyValue
 	if err := json.NewDecoder(r.Body).Decode(&kv); err != nil {
 		s.log.Error().Err(err).Msg("failed to decode request body")
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(Response{Message: "invalid request body", StatusCode: StatusInvalidJSON})
+		s.doJSONWrite(w, http.StatusBadRequest, Response{Message: "invalid request body", StatusCode: StatusInvalidJSON})
 		return
 	}
 
 	if err := s.validateKeyValue(kv); err != nil {
 		s.log.Error().Err(err).Msg("invalid key-value pair")
-		w.WriteHeader(http.StatusBadRequest)
 		var statusCode StatusCode
 		if errors.Is(err, ErrKeyTooLong) {
 			statusCode = StatusKeyTooLong
 		} else {
 			statusCode = StatusValueTooLarge
 		}
-
-		json.NewEncoder(w).Encode(Response{Message: err.Error(), StatusCode: statusCode})
+		s.doJSONWrite(w, http.StatusBadRequest, Response{Message: err.Error(), StatusCode: statusCode})
 		return
 	}
 
 	_, exists, err := s.store.Get(r.Context(), kv.Key)
 	if err != nil {
 		s.log.Error().Err(err).Msg("failed to get key")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(Response{Message: "failed to get key", StatusCode: StatusStorageError})
+		s.doJSONWrite(w, http.StatusInternalServerError, Response{Message: "failed to get key", StatusCode: StatusStorageError})
 		return
 	}
 
 	if exists {
-		w.WriteHeader(http.StatusConflict)
-		json.NewEncoder(w).Encode(Response{Message: "key already exists", StatusCode: StatusKeyExists})
+		s.doJSONWrite(w, http.StatusConflict, Response{Message: "key already exists", StatusCode: StatusKeyExists})
 		return
 	}
 
 	if err := s.store.Set(r.Context(), kv.Key, []byte(kv.Value)); err != nil {
 		s.log.Error().Err(err).Msg("failed to set key")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(Response{Message: "failed to set key", StatusCode: StatusStorageError})
+		s.doJSONWrite(w, http.StatusInternalServerError, Response{Message: "failed to set key", StatusCode: StatusStorageError})
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(Response{Message: "key created successfully", StatusCode: StatusSuccess})
+	s.doJSONWrite(w, http.StatusCreated, Response{Message: "key created successfully", StatusCode: StatusSuccess})
 }
 
 func (s *Service) GetKey(w http.ResponseWriter, r *http.Request) {
@@ -161,26 +153,22 @@ func (s *Service) GetKey(w http.ResponseWriter, r *http.Request) {
 
 	key := params.ByName("key")
 	if key == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(Response{Message: "invalid key", StatusCode: StatusInvalidKey})
+		s.doJSONWrite(w, http.StatusBadRequest, Response{Message: "invalid key", StatusCode: StatusInvalidKey})
 		return
 	}
 
 	kv, exists, err := s.store.Get(r.Context(), key)
 	if err != nil {
 		s.log.Error().Err(err).Msg("failed to get key")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(Response{Message: "failed to get key", StatusCode: StatusStorageError})
+		s.doJSONWrite(w, http.StatusInternalServerError, Response{Message: "failed to get key", StatusCode: StatusStorageError})
 		return
 	}
 
 	if !exists {
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(Response{Message: "key not found", StatusCode: StatusKeyNotFound})
+		s.doJSONWrite(w, http.StatusNotFound, Response{Message: "key not found", StatusCode: StatusKeyNotFound})
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(Response{Message: "key found successfully", StatusCode: StatusSuccess,
 		Data: KeyValue{
@@ -194,33 +182,38 @@ func (s *Service) DeleteKey(w http.ResponseWriter, req *http.Request) {
 
 	key := params.ByName("key")
 	if key == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(Response{Message: "invalid key", StatusCode: StatusInvalidKey})
+		s.doJSONWrite(w, http.StatusBadRequest, Response{Message: "invalid key", StatusCode: StatusInvalidKey})
 		return
 	}
 
 	_, exists, err := s.store.Get(req.Context(), key)
 	if err != nil {
 		s.log.Error().Err(err).Msg("failed to get key")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(Response{Message: "failed to get key", StatusCode: StatusStorageError})
+		s.doJSONWrite(w, http.StatusInternalServerError, Response{Message: "failed to get key", StatusCode: StatusStorageError})
 		return
 	}
 
 	if !exists {
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(Response{Message: "key not found", StatusCode: StatusKeyNotFound})
+		s.doJSONWrite(w, http.StatusNotFound, Response{Message: "key not found", StatusCode: StatusKeyNotFound})
 		return
 	}
 
 	if err := s.store.Delete(req.Context(), key); err != nil {
 		s.log.Error().Err(err).Msg("failed to delete key")
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(Response{Message: "failed to delete key", StatusCode: StatusStorageError})
+		s.doJSONWrite(w, http.StatusInternalServerError, Response{Message: "failed to delete key", StatusCode: StatusStorageError})
 		return
 	}
 
+	s.doJSONWrite(w, http.StatusOK, Response{Message: "key deleted successfully", StatusCode: StatusSuccess})
+}
+
+func (s *Service) doJSONWrite(w http.ResponseWriter, code int, obj any) {
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(Response{Message: "key deleted successfully", StatusCode: StatusSuccess})
+	w.WriteHeader(code)
+	err := json.NewEncoder(w).Encode(obj)
+	if err != nil {
+		s.log.Error().Err(err).Msg("error writing response")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
 }

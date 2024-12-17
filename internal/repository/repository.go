@@ -37,6 +37,14 @@ func NewKeyValueStore(log zerolog.Logger) (*KeyValueStore, error) {
 	return kvs, nil
 }
 
+// Seed populates the store with initial data, used in tests.
+// TODO: move this to a persistence layer
+func (k *KeyValueStore) Seed(data map[string][]byte) {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	k.data = data
+}
+
 // Set sets a key-value pair in the store.
 func (k *KeyValueStore) Set(ctx context.Context, key string, value []byte) error {
 	k.mu.Lock()

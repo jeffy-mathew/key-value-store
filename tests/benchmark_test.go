@@ -1,13 +1,13 @@
 package tests
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
+	"encoding/gob"
 	"fmt"
 	"math/rand"
 	"net/http"
-	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -21,10 +21,8 @@ import (
 var BenchmarkData []byte
 
 type BenchmarkSuite struct {
-	srv      *httptest.Server
 	client   *http.Client
 	store    repository.Store
-	dataFile string
 	testKeys []string
 }
 
@@ -33,15 +31,23 @@ func generateValue(b *testing.B, size int) []byte {
 	return []byte(strings.Repeat("v", size))
 }
 
-func copyGobData(b *testing.B) string {
+func getSeedData(b *testing.B) map[string][]byte {
 	b.Helper()
 
-	//temp test file to run benchmark
-	dataFile := fmt.Sprintf("testdata/benchmark_data_%d.gob", time.Now().UnixNano())
-	if err := os.WriteFile(dataFile, BenchmarkData, 0644); err != nil {
-		b.Fatalf("Failed to write benchmark data: %v", err)
+	// Create a decoder for the embedded data
+	decoder := gob.NewDecoder(bytes.NewReader(BenchmarkData))
+
+	// Create a struct to hold the decoded data
+	var data struct {
+		Store map[string][]byte
 	}
-	return dataFile
+
+	// Decode the data
+	if err := decoder.Decode(&data); err != nil {
+		b.Fatalf("Failed to decode benchmark data: %v", err)
+	}
+
+	return data.Store
 }
 
 func setupBenchmark(b *testing.B) *BenchmarkSuite {
@@ -49,50 +55,31 @@ func setupBenchmark(b *testing.B) *BenchmarkSuite {
 
 	logger := zerolog.New(zerolog.NewConsoleWriter())
 
-	// Copy the embedded gob data to a temporary file
-	dataFile := copyGobData(b)
-
-	opts := repository.Opts{
-		SyncInterval: time.Second * 5,
-		DataFile:     dataFile,
-	}
-
-	store, err := repository.NewKeyValueStore(logger, opts)
+	store, err := repository.NewKeyValueStore(logger)
 	if err != nil {
 		b.Fatalf("Failed to create store: %v", err)
 	}
 
-	// Generate sequential keys for benchmarking
-	keys := make([]string, 1000)
-	for i := 0; i < 1000; i++ {
-		keys[i] = fmt.Sprintf("key-%d", i)
-	}
+	// Seed the store with benchmark data
+	seedData := getSeedData(b)
+	store.Seed(seedData)
 
-	r := http.NewServeMux()
-	srv := httptest.NewServer(r)
+	// Extract test keys for benchmarking
+	keys := make([]string, 0, len(seedData))
+	for k := range seedData {
+		keys = append(keys, k)
+	}
 
 	return &BenchmarkSuite{
-		srv:      srv,
 		client:   &http.Client{},
 		store:    store,
-		dataFile: dataFile,
 		testKeys: keys,
-	}
-}
-
-func (s *BenchmarkSuite) teardown() {
-	s.srv.Close()
-	s.store.Close()
-	// clean up the temporary gob file
-	if err := os.Remove(s.dataFile); err != nil && !os.IsNotExist(err) {
-		fmt.Printf("Warning: failed to remove data file %s: %v\n", s.dataFile, err)
 	}
 }
 
 // BenchmarkDirectWrites tests write operations directly on the store
 func BenchmarkDirectWrites(b *testing.B) {
 	suite := setupBenchmark(b)
-	b.Cleanup(suite.teardown)
 
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
@@ -109,7 +96,6 @@ func BenchmarkDirectWrites(b *testing.B) {
 // BenchmarkDirectReads tests read operations directly on the store
 func BenchmarkDirectReads(b *testing.B) {
 	suite := setupBenchmark(b)
-	b.Cleanup(suite.teardown)
 
 	numKeys := len(suite.testKeys)
 	if numKeys == 0 {
@@ -138,7 +124,6 @@ func BenchmarkDirectReads(b *testing.B) {
 // BenchmarkMixedDirectOperations tests a combination of read and write operations
 func BenchmarkMixedDirectOperations(b *testing.B) {
 	suite := setupBenchmark(b)
-	b.Cleanup(suite.teardown)
 
 	if err := suite.store.Set(context.Background(), "key", []byte("value")); err != nil {
 		b.Fatalf("Failed to set initial data: %v", err)
@@ -173,7 +158,6 @@ func BenchmarkMixedDirectOperations(b *testing.B) {
 // BenchmarkHighConcurrencyDirectOperations tests the system under very high concurrent load
 func BenchmarkHighConcurrencyDirectOperations(b *testing.B) {
 	suite := setupBenchmark(b)
-	b.Cleanup(suite.teardown)
 
 	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {

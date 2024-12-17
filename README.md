@@ -137,7 +137,7 @@ go test -bench=. -benchmem ./tests/
 ```
 
 ## Benchmark Results
-
+These benchmarks are run on a macOS machine with a M1 chip and 8GB of RAM.
 ### HTTP benchmarks
 ```
 goos: darwin

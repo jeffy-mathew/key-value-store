@@ -13,7 +13,7 @@ tasks:
     - task test:integration
     - task test:benchmark:integration
     - task test:benchmark:repository
-    
+
   test:unit:
     desc: Run all tests
     cmds:
@@ -27,12 +27,12 @@ tasks:
   test:benchmark:integration:
     desc: Run HTTP benchmark tests
     cmds:
-      - go test -v ./tests -tags=integration -bench=. -benchmem
+      - go test ./tests -tags=integration -bench=. -benchmem
 
   test:benchmark:repository:
     desc: Run store/repository benchmark tests
     cmds:
-      - go test -v ./internal/repository -bench=. -benchmem
+      - go test  ./internal/repository -bench=. -benchmem
 
   run:
     desc: Run the key-value store service

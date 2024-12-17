@@ -135,3 +135,33 @@ go test ./tests -tags=integration
 # Benchmark tests
 go test -bench=. -benchmem ./tests/
 ```
+
+## Benchmark Results
+
+### HTTP benchmarks
+```
+goos: darwin
+goarch: arm64
+pkg: codesignal/tests
+BenchmarkSetAPI
+BenchmarkSetAPI-8          24718             47471 ns/op           10716 B/op        102 allocs/op
+BenchmarkGetAPI
+BenchmarkGetAPI-8          30154             39211 ns/op            6812 B/op         82 allocs/op
+BenchmarkDeleteAPI
+BenchmarkDeleteAPI-8       31857             37666 ns/op            6614 B/op         81 allocs/op
+PASS
+ok      codesignal/tests        5.125s
+```
+
+### Store benchmarks
+```
+goos: darwin
+goarch: arm64
+pkg: codesignal/internal/repository
+BenchmarkDirectWrites-8                          2348599               567.4 ns/op          1193 B/op           4 allocs/op
+BenchmarkDirectReads-8                          13897875                85.44 ns/op            0 B/op           0 allocs/op
+BenchmarkMixedDirectOperations-8                 7675345               181.4 ns/op            60 B/op           1 allocs/op
+BenchmarkHighConcurrencyDirectOperations-8       3994598               330.6 ns/op           154 B/op           5 allocs/op
+PASS
+ok      codesignal/internal/repository  6.619s
+```
